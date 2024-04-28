@@ -1,0 +1,30 @@
+{
+  "name": "rethinkdb-ts-extra",
+  "version": "0.1.0",
+  "description": "rethinkdb-ts with extra utilitised for typing and structure upgrading",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "lint": "ts-standard --fix",
+    "build": "tsc"
+  },
+  "repository": {
+    "url": "https://github.com/dawnniie/rethinkdb-ts-extra.git"
+  },
+  "keywords": [
+    "rethinkdb",
+    "database",
+    "typescript"
+  ],
+  "author": "dawnniie",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "ts-standard": "^12.0.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "rethinkdb-ts": "^2.6.0"
+  }
+}
