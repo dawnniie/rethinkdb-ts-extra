@@ -5,14 +5,11 @@ import { createUpgrader } from './upgrade.js'
 export interface ExtraTableConfigTypeBase { id: string }
 
 interface ExtraTableConfigIndexSingleOrMulti { multi?: true }
-interface ExtraTableConfigIndexCompound<T extends ExtraTableConfigTypeBase> { compound: readonly (keyof T)[] }
-interface ExtraTableConfigIndexCustom<T extends ExtraTableConfigTypeBase> { multi: never, custom: (row: RDatum<T>) => RDatum<any> | ReadonlyArray<RDatum<any>> }
+interface ExtraTableConfigIndexCompound<T extends ExtraTableConfigTypeBase> { compound: ReadonlyArray<keyof T> }
+interface ExtraTableConfigIndexCustom<T extends ExtraTableConfigTypeBase> { custom: (row: RDatum<T>) => RDatum<any> | ReadonlyArray<RDatum<any>> }
 interface ExtraTableConfigIndexCustomMulti<T extends ExtraTableConfigTypeBase> { multi: true, custom: (row: RDatum<T>) => ReadonlyArray<RDatum<any> | ReadonlyArray<RDatum<any>>> }
 export interface ExtraTableConfigIndexBase<T extends ExtraTableConfigTypeBase> {
-  [index: string]: ExtraTableConfigIndexSingleOrMulti |
-    ExtraTableConfigIndexCompound<T> |
-    ExtraTableConfigIndexCustom<T> |
-    ExtraTableConfigIndexCustomMulti<T>
+  [index: string]: ExtraTableConfigIndexSingleOrMulti | ExtraTableConfigIndexCompound<T> | ExtraTableConfigIndexCustom<T> | ExtraTableConfigIndexCustomMulti<T>
 }
 
 export interface ExtraTableConfig<T extends ExtraTableConfigTypeBase, I extends ExtraTableConfigIndexBase<T>> {
@@ -58,25 +55,39 @@ export function configure<T extends ExtraTableConfigTypeBase> (db: string, table
 
 type DistOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never
 
+type DeDatumToValue<T> = T extends RDatum<infer K> ? RValue<K> : RValue<T>
 type QueryForIndex<Config extends ExtraTableConfig<any, any>, Index extends keyof Config['indexes']> = (
   // Compound indexes we construct a mapped tuple with a specific type for each index based on the indexed fields
   'compound' extends keyof Config['indexes'][Index]
     ? {
         [F in Exclude<keyof Config['indexes'][Index]['compound'], keyof any[]>]:
-        Config['indexes'][Index]['compound'][F] extends keyof Config['type'] ? RValue<Config['type'][Config['indexes'][Index]['compound'][F]]> : never
+        Config['indexes'][Index]['compound'][F] extends keyof Config['type']
+          ? DeDatumToValue<Config['type'][Config['indexes'][Index]['compound'][F]]>
+          : never
       }
-  // Multi indexes we allow any possible value in the array from the specified field
-    : 'multi' extends keyof Config['indexes'][Index]
-      ? Config['type'][Index] extends any[] // (also double check the field is actually compatible)
-        ? RValue<Config['type'][Index][number]> : never
     // Custom indexes we base the input on the output of the index value generation function
-      : 'custom' extends keyof Config['indexes'][Index]
-        ? Config['indexes'][Index]['custom'] extends ((...args: any) => RDatum<infer R>)
-          ? R
+    : 'custom' extends keyof Config['indexes'][Index]
+      ? 'multi' extends keyof Config['indexes'][Index]
+        // Custom multi indexes with a nested array must be multi compound indexes, so infer the nested compound type
+        ? Config['indexes'][Index]['custom'] extends ((...args: any) => ReadonlyArray<infer R extends readonly any[]>)
+          ? { [F in Exclude<keyof R, keyof any[]>]: DeDatumToValue<R[F]> }
+          // Otherwise they are regular multi indexes, so infer the multi type
           : Config['indexes'][Index]['custom'] extends ((...args: any) => infer R extends readonly any[])
-            ? { [F in keyof R]: R[F] extends RDatum<infer K> ? K : never }
+            ? DeDatumToValue<R[number]>
             : never
-      // Other indexes we just return the field type itself
+        // Custom non-multi indexes with an array must be compound indexes, so infer the compound type
+        : Config['indexes'][Index]['custom'] extends ((...args: any) => infer R extends readonly any[])
+          ? { [F in Exclude<keyof R, keyof any[]>]: DeDatumToValue<R[F]> }
+          // Otherwise they are regular custom indexes, so infer the simple type
+          : Config['indexes'][Index]['custom'] extends ((...args: any) => infer R)
+            ? DeDatumToValue<R>
+            : never
+      // Multi indexes we allow any possible value in the array from the specified field
+      : 'multi' extends keyof Config['indexes'][Index]
+        ? Config['type'][Index] extends infer R extends readonly any[]
+          ? DeDatumToValue<R[number]>
+          : never
+        // Other indexes we just return the field type itself
         : RValue<Config['type'][Index]>
 )
 

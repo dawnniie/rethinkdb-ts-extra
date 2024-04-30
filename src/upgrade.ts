@@ -50,7 +50,7 @@ export function createUpgrader (r: R, configs: { [name: string]: ExtraTableConfi
     if (!needsUpgrade) return { skipped: true, actions }
 
     const databasesInConfig = [...new Set(Object.values(configs).map(config => config.db))]
-    const databasesDiff = diff(databases.filter(db => db !== upgradeDb), databasesInConfig)
+    const databasesDiff = diff(databases.filter(db => db !== upgradeDb), databasesInConfig.filter(db => db !== upgradeDb))
 
     for (const database of databasesDiff.added) {
       actions.push({ entity: 'database', action: 'create', name: database })
@@ -97,7 +97,7 @@ export function createUpgrader (r: R, configs: { [name: string]: ExtraTableConfi
           const multi = 'multi' in indexConfig ? indexConfig.multi : false
 
           if ('custom' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.custom, { multi }).run()
-          else if ('compound' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.compound.map((f: string) => r.row(f))).run()
+          else if ('compound' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.compound.map(f => r.row(f as string))).run()
           else await r.db(database).table(table).indexCreate(index, { multi }).run()
 
           await r.db(database).table(table).indexWait(index).run()
