@@ -3,7 +3,17 @@ import type { RSelection, RSingleSelection, RTable, InsertOptions, RDatum, RValu
 import { createUpgrader } from './upgrade.js'
 
 export interface ExtraTableConfigTypeBase { id: string }
-export interface ExtraTableConfigIndexBase<T extends ExtraTableConfigTypeBase> { [index: string]: { multi?: boolean } & ({} | { compound: readonly string[] } | { custom?: (row: RDatum<T>) => RDatum<any> | ReadonlyArray<RDatum<any>> }) }
+
+interface ExtraTableConfigIndexSingleOrMulti { multi?: true }
+interface ExtraTableConfigIndexCompound<T extends ExtraTableConfigTypeBase> { compound: readonly (keyof T)[] }
+interface ExtraTableConfigIndexCustom<T extends ExtraTableConfigTypeBase> { multi: never, custom: (row: RDatum<T>) => RDatum<any> | ReadonlyArray<RDatum<any>> }
+interface ExtraTableConfigIndexCustomMulti<T extends ExtraTableConfigTypeBase> { multi: true, custom: (row: RDatum<T>) => ReadonlyArray<RDatum<any> | ReadonlyArray<RDatum<any>>> }
+export interface ExtraTableConfigIndexBase<T extends ExtraTableConfigTypeBase> {
+  [index: string]: ExtraTableConfigIndexSingleOrMulti |
+    ExtraTableConfigIndexCompound<T> |
+    ExtraTableConfigIndexCustom<T> |
+    ExtraTableConfigIndexCustomMulti<T>
+}
 
 export interface ExtraTableConfig<T extends ExtraTableConfigTypeBase, I extends ExtraTableConfigIndexBase<T>> {
   db: string
