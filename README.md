@@ -41,6 +41,8 @@ custom: { custom: function (row) { return row('hobbies').add(row('sports')) } }
 
 The `multi` index here is really just a simple index with the multi index option. Any simple or custom index can be set to be a multi index as long as the value in question is an array. A 'multi compound' index can also be constructed, but needs to be done with a custom expression. Read more about rethinkdb [secondary indexes here](https://rethinkdb.com/docs/secondary-indexes/javascript).
 
+When constructing a compound or multi compound index based on a custom expression, you will likely need to append `as const` after the array so that we can correctly infer the individual fields. See `src/test.ts` for some meaningless examples of more complex custom expression indexes.
+
 #### attachConfigurations
 
 Attaches provided table configurations (and other utilies) to the `r` object with detailed extra data and index typings. Also provides an `upgrade` function for in-place database structure updates (sort of like automated migrations).
