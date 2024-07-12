@@ -61,11 +61,16 @@ export type RConnectionOptionsExtra<DefaultDB extends string> = Pick<RBaseConnec
   waitForHealthy?: boolean
 }
 
-export type RStreamExtra<Config extends ExtraTableConfig<any, any>> = Omit<RStream<Config['type']>, 'orderBy'> & {
-  orderBy(...fieldOrIndex: Array<FieldSelector<Config['type']> | { index: keyof Config['indexes'] }>): RStreamExtra<Config>
+export type RStreamExtra<Config extends ExtraTableConfig<any, any>, T> = Omit<RStream<T>, 'orderBy'> & {
+  <A extends keyof T>(attribute: RValue<A>): RStreamExtra<Config, T[A]>,
+  (n: RValue<number>): RDatum<T>,
+  
+  orderBy(...fieldOrIndex: Array<FieldSelector<T> | { index: keyof Config['indexes'] }>): RStreamExtra<Config, T>
 }
 
-export type RSingleSelectionExtra<T> = Omit<RSingleSelection<T>, 'update' | 'replace'> & {
+export type RSingleSelectionExtra<_Config extends ExtraTableConfig<any, any>, T> = Omit<RSingleSelection<T>, 'update' | 'replace'> & {
+  <A extends keyof T>(attribute: RValue<A>): RDatum<T[A]>,
+  
   update(obj: RValue<DeepPartial<T>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
   update(updater: (previous: RDatum<T>) => RValue<DeepPartial<DeepValue<T>>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
 
@@ -73,27 +78,33 @@ export type RSingleSelectionExtra<T> = Omit<RSingleSelection<T>, 'update' | 'rep
   replace(replacer: (previous: RDatum<T>) => RValue<DeepValue<T>>, options?: UpdateOptions): RDatum<WriteResult<T>>
 }
 
-export type RSelectionExtra<Config extends ExtraTableConfig<any, any>> = Omit<RSelection<Config['type']>, 'update' | 'replace' | 'orderBy'> & {
-  update(obj: RValue<DeepPartial<Config['type']>>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
-  update(updater: (previous: RDatum<Config['type']>) => RValue<DeepPartial<DeepValue<Config['type']>>>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
+export type RSelectionExtra<Config extends ExtraTableConfig<any, any>, T> = Omit<RSelection<T>, 'update' | 'replace' | 'orderBy'> & {
+  <A extends keyof T>(attribute: RValue<A>): RStreamExtra<Config, T[A]>,
+  (n: RValue<number>): RDatum<T>,
+  
+  update(obj: RValue<DeepPartial<T>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
+  update(updater: (previous: RDatum<T>) => RValue<DeepPartial<DeepValue<T>>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
 
-  replace(obj: RValue<Config['type']>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
-  replace(replacer: (previous: RDatum<Config['type']>) => RValue<DeepValue<Config['type']>>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
+  replace(obj: RValue<T>, options?: UpdateOptions): RDatum<WriteResult<T>>,
+  replace(replacer: (previous: RDatum<T>) => RValue<DeepValue<T>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
 
-  orderBy(...fieldOrIndex: Array<FieldSelector<Config['type']> | { index: keyof Config['indexes'] }>): RStreamExtra<Config>
+  orderBy(...fieldOrIndex: Array<FieldSelector<T> | { index: keyof Config['indexes'] }>): RStreamExtra<Config, T>
 }
 
 export type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable<Config['type']>, 'get' | 'getAll' | 'between' | 'insert' | 'update' | 'replace' | 'orderBy'> & {
-  get(key: Config['type']['id'] | RDatum<Config['type']['id']>): RSingleSelectionExtra<Config['type'] | null>,
+  <A extends keyof Config['type']>(attribute: RValue<A>): RStreamExtra<Config, Config['type'][A]>,
+  (n: RValue<number>): RDatum<Config['type']>,
+  
+  get(key: Config['type']['id'] | RDatum<Config['type']['id']>): RSingleSelectionExtra<Config, Config['type'] | null>,
 
-  getAll<I extends keyof Config['indexes']>(key: QueryForIndex<Config, I>, options: { index: I }): RSelectionExtra<Config>,
-  getAll<I extends (keyof Config['indexes'] | PrimaryIndex) = PrimaryIndex>(...keys: Array<QueryForIndex<Config, I> | { index: I }>): RSelectionExtra<Config>,
+  getAll<I extends keyof Config['indexes']>(key: QueryForIndex<Config, I>, options: { index: I }): RSelectionExtra<Config, Config['type']>,
+  getAll<I extends (keyof Config['indexes'] | PrimaryIndex) = PrimaryIndex>(...keys: Array<QueryForIndex<Config, I> | { index: I }>): RSelectionExtra<Config, Config['type']>,
 
   between<I extends (keyof Config['indexes'] | PrimaryIndex) = PrimaryIndex>(
     lowKey: QueryForIndex<Config, I>,
     highKey: QueryForIndex<Config, I>,
     options?: { index?: I, leftBound?: 'open' | 'closed', rightBound?: 'open' | 'closed' }
-  ): RSelectionExtra<Config>,
+  ): RSelectionExtra<Config, Config['type']>,
 
   insert(
     obj: RValue<Config['type'] |
@@ -108,7 +119,7 @@ export type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable
   replace(obj: RValue<Config['type']>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
   replace(replacer: (previous: RDatum<Config['type']>) => RValue<DeepValue<Config['type']>>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
 
-  orderBy(...fieldOrIndex: Array<FieldSelector<Config['type']> | { index: keyof Config['indexes'] }>): RStreamExtra<Config>
+  orderBy(...fieldOrIndex: Array<FieldSelector<Config['type']> | { index: keyof Config['indexes'] }>): RStreamExtra<Config, Config['type']>
 }
 
 export type RDatabaseExtraConfigs = Record<string, Record<string, ExtraTableConfig<any, any>>>

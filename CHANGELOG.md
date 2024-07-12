@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Re-introduced lost call signatures for some types.
+- Cleaned up (and made more consistent) `Config` and `T` generics for `R_Extra` type replacements.
+
 ## 0.2.0
 
 - Fixed restrictions of primary key types and ensured primary key types are reflected in `get`, `getAll`, etc.

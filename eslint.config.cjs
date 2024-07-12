@@ -17,7 +17,7 @@ module.exports = [
       '@typescript-eslint/method-signature-style': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'error',
       'import/order': ['error', {
         alphabetize: { order: 'asc', caseInsensitive: true },
