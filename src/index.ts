@@ -1,23 +1,7 @@
+import { createSyncer } from './sync.js'
 import { r } from 'rethinkdb-ts'
-import type { RSelection, RSingleSelection, RTable, InsertOptions, RDatum, RValue, WriteResult } from 'rethinkdb-ts'
-import { createUpgrader } from './upgrade.js'
-
-export interface ExtraTableConfigTypeBase { id: string }
-
-interface ExtraTableConfigIndexSingleOrMulti { multi?: true }
-interface ExtraTableConfigIndexCompound<T extends ExtraTableConfigTypeBase> { compound: ReadonlyArray<keyof T> }
-interface ExtraTableConfigIndexCustom<T extends ExtraTableConfigTypeBase> { custom: (row: RDatum<T>) => RDatum<any> | ReadonlyArray<RDatum<any>> }
-interface ExtraTableConfigIndexCustomMulti<T extends ExtraTableConfigTypeBase> { multi: true, custom: (row: RDatum<T>) => ReadonlyArray<RDatum<any> | ReadonlyArray<RDatum<any>>> }
-export interface ExtraTableConfigIndexBase<T extends ExtraTableConfigTypeBase> {
-  [index: string]: ExtraTableConfigIndexSingleOrMulti | ExtraTableConfigIndexCompound<T> | ExtraTableConfigIndexCustom<T> | ExtraTableConfigIndexCustomMulti<T>
-}
-
-export interface ExtraTableConfig<T extends ExtraTableConfigTypeBase, I extends ExtraTableConfigIndexBase<T>> {
-  db: string
-  table: string
-  type: T
-  indexes: I
-}
+import type { ExtraTableConfigIndexBase } from './indexes.js'
+import type { ExtraTableConfig, ExtraTableConfigTypeBase, RTableExtra } from './types.js'
 
 /**
  * Constructs an object that is used in `attachConfigurations`, and does so with some nice intellisence autocomplete.
@@ -53,66 +37,19 @@ export function configure<T extends ExtraTableConfigTypeBase> (db: string, table
   }
 }
 
-type DistOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never
-
-type DeDatumToValue<T> = T extends RDatum<infer K> ? RValue<K> : RValue<T>
-type QueryForIndex<Config extends ExtraTableConfig<any, any>, Index extends keyof Config['indexes']> = (
-  // Compound indexes we construct a mapped tuple with a specific type for each index based on the indexed fields
-  'compound' extends keyof Config['indexes'][Index]
-    ? {
-        [F in Exclude<keyof Config['indexes'][Index]['compound'], keyof any[]>]:
-        Config['indexes'][Index]['compound'][F] extends keyof Config['type']
-          ? DeDatumToValue<Config['type'][Config['indexes'][Index]['compound'][F]]>
-          : never
-      }
-    // Custom indexes we base the input on the output of the index value generation function
-    : 'custom' extends keyof Config['indexes'][Index]
-      ? 'multi' extends keyof Config['indexes'][Index]
-        // Custom multi indexes with a nested array must be multi compound indexes, so infer the nested compound type
-        ? Config['indexes'][Index]['custom'] extends ((...args: any) => ReadonlyArray<infer R extends readonly any[]>)
-          ? { [F in Exclude<keyof R, keyof any[]>]: DeDatumToValue<R[F]> }
-          // Otherwise they are regular multi indexes, so infer the multi type
-          : Config['indexes'][Index]['custom'] extends ((...args: any) => infer R extends readonly any[])
-            ? DeDatumToValue<R[number]>
-            : never
-        // Custom non-multi indexes with an array must be compound indexes, so infer the compound type
-        : Config['indexes'][Index]['custom'] extends ((...args: any) => infer R extends readonly any[])
-          ? { [F in Exclude<keyof R, keyof any[]>]: DeDatumToValue<R[F]> }
-          // Otherwise they are regular custom indexes, so infer the simple type
-          : Config['indexes'][Index]['custom'] extends ((...args: any) => infer R)
-            ? DeDatumToValue<R>
-            : never
-      // Multi indexes we allow any possible value in the array from the specified field
-      : 'multi' extends keyof Config['indexes'][Index]
-        ? Config['type'][Index] extends infer R extends readonly any[]
-          ? DeDatumToValue<R[number]>
-          : never
-        // Other indexes we just return the field type itself
-        : RValue<Config['type'][Index]>
-)
-
-type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable<Config['type']>, 'get' | 'getAll' | 'between' | 'insert'> & {
-  get: (key: Config['type']['id'] | RDatum<Config['type']['id']>) => RSingleSelection<Config['type'] | null>
-  getAll: (<I extends keyof Config['indexes']>(key: QueryForIndex<Config, I>, options: { index: I }) => RSelection<Config['type']>) & ((...key: Array<Config['type']['id']>) => RSelection<Config['type']>)
-  between: <I extends keyof Config['indexes']>(
-    lowKey: QueryForIndex<Config, I>,
-    highKey: QueryForIndex<Config, I>,
-    options?: { index?: I, leftBound?: 'open' | 'closed', rightBound?: 'open' | 'closed' }
-  ) => RSelection<Config['type']>
-  insert: (obj: RValue<Config['type'] | DistOmit<Config['type'], 'id'>> | RValue<Array<Config['type'] | DistOmit<Config['type'], 'id'>>>, options?: InsertOptions) => RDatum<WriteResult<Config['type']>>
-}
-
 type Re<Configs extends { [name: string]: ExtraTableConfig<any, any> }> = typeof r
   & { [tableName in keyof Configs]: RTableExtra<Configs[tableName]> }
   & {
+    /** Wrap around an index name to perform orderBy in reverse */
+    desc<T>(index: T): T,
     /** A typescript-friendly way of clearing a field using `re.literal()` */
-    empty: () => undefined
+    empty(): undefined
   }
 
-interface AttachConfigurationsReturnType<Configs extends { [name: string]: ExtraTableConfig<any, any> }> { r: Re<Configs>, upgrade: ReturnType<typeof createUpgrader> }
+interface AttachConfigurationsReturnType<Configs extends { [name: string]: ExtraTableConfig<any, any> }> { r: Re<Configs>, sync: ReturnType<typeof createSyncer> }
 
 /**
- * Attaches provided table configurations (and other utilies) to the `r` object with detailed extra data and index typings. Also provides an `upgrade` function for in-place database structure updates (sort of like automated migrations).
+ * Attaches provided table configurations (and other utilies) to the `r` object with detailed extra data and index typings. Also provides a `sync` function for in-place database structure updates (sort of like automated structure (not data!) migrations).
  *
  * Each table config is attached to `r` with its name (the key in the object), so that the table can be accessed by shorthand like so:
  *
@@ -137,7 +74,7 @@ export function attachConfigurations<const Configs extends { [name: string]: Ext
   // @ts-expect-error this override is defined below
   r.empty = () => r.literal()
 
-  return { r: r as Re<Configs>, upgrade: createUpgrader(r, configs) }
+  return { r: r as Re<Configs>, sync: createSyncer(r, configs) }
 }
 
 export * from 'rethinkdb-ts'

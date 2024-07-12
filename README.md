@@ -45,7 +45,7 @@ When constructing a compound or multi compound index based on a custom expressio
 
 #### attachConfigurations
 
-Attaches provided table configurations (and other utilies) to the `r` object with detailed extra data and index typings. Also provides an `upgrade` function for in-place database structure updates (sort of like automated migrations).
+Attaches provided table configurations (and other utilies) to the `r` object with detailed extra data and index typings. Also provides a `sync` function for in-place database structure syncing (sort of like automated migrations, but only for the databases/tables/indexes, not the actual data).
 
 ```ts
 syntax: (configs: Record<string, ExtraTableConfig>)
@@ -68,9 +68,9 @@ Even though these shorthands are attached in-place to the `r` object exported by
 
 If you're using custom indexes, you may find that having the `configure` calls in the arguments for the `attachConfigurations` call breaks the inference of the custom expression argument type. I can't figure out how to fix this yet, and my only solution has been to move the configure call away and pass the output in. If you have any ideas for this, please let me know.
 
-**upgrade**
+**sync**
 
-In the object returned by `attachConfigurations`, these is also an `upgrade` function. You can call this every time your code runs to sha1 hash the configurations and compare this to the previous hash (stored in the database itself). If the hashes don't match, the database structure will be automatically updated to what your configuration specifies (creating databases, tables, and indexes). Nothing is dropped by default unless you specify so.
+In the object returned by `attachConfigurations`, these is also a `sync` function. You can call this every time your code runs to sha1 hash the configurations and compare this to the previous hash (stored in the database itself). If the hashes don't match, the database structure will be automatically updated to what your configuration specifies (creating databases, tables, and indexes). Nothing is dropped by default unless you specify so.
 
 If no previous hash exists, it will be treated as a mismatch and everything in the configuration will be created in the database as necessary (where it doesn't already exist).
 
@@ -100,7 +100,7 @@ interface Post {
 /* etc... you would define interfaces/types for everything in your database,
   which I put in other files */
 
-const { r, upgrade } = attachConfigurations({
+const { r, sync } = attachConfigurations({
   users: configure<User>('mydb', 'users')({ /* indexes would go here, but none for users */ }),
   posts: configure<Post>('mydb', 'posts')({
     author_id: {}, // simple index
@@ -112,12 +112,15 @@ const { r, upgrade } = attachConfigurations({
 })
 
 // check for any changes in structure since we last ran, running updates to bring the database into sync if necessary
-// put this in 'mydb' instead of the default (which is 'upgrade')
-await upgrade({ db: 'mydb', dropUnknownIndexes: true })
+await sync({ dropUnknownIndexes: true, log: 'verbose' })
 
 // export to use everywhere else in the project
 export const { r }
 ```
+
+## Future
+
+I'm refactoring a lot of the developer interface for this project, in a new version at `rethinkdb-ts-extra/future`. I aim for it to be less hacky and a bit more intuitive, but holding off on writing documentation for it until it's more finalised. It should be usable though.
 
 ## Project Status
 

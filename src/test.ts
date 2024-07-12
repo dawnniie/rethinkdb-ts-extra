@@ -1,17 +1,17 @@
 import { attachConfigurations, configure } from './index.js'
 
-interface SillyPost {
-  id: string
-  name: string
-  forum_id: string
-  from_user_id: string
-  to_user_id: string
-  tags: string[]
+export interface SillyPost {
+  id: string,
+  name: string,
+  forum_id: string,
+  from_user_id: string,
+  to_user_id: string,
+  tags: string[],
   likes: number
 }
 
 const tableConfig = {
-  test: configure<SillyPost>('rdb-ts-extra-test', 'data')({
+  posts: configure<SillyPost>('my_database', 'posts')({
     forum_id: {},
     tags: { multi: true },
     // compound index allowing to order posts in a 'forum' by like count
@@ -24,20 +24,24 @@ const tableConfig = {
     quality: { custom: row => row('tags').count().mul(3).add(row('likes').count()) },
     // custom compound index, when a compound index needs to be more complex
     identifier: { custom: row => [row('forum_id'), row('name').downcase()] as const }
-  })
+  }),
+  pie: configure<{ id: number }>('db2', 'pie')({})
 }
 
-const { r, upgrade } = attachConfigurations(tableConfig)
+const { r, sync } = attachConfigurations(tableConfig)
 
-await r.connectPool()
-await upgrade({ db: 'rdb-ts-extra-test' })
+await r.connectPool({ host: 'localhost', port: 28015 })
+await sync({ memory: { db: 'my_database', table: 'sync', id: 'sync' } })
 
-await r.test.getAll('test', { index: 'forum_id' }).run()
-await r.test.getAll('tag', { index: 'tags' }).run()
-await r.test.between(['test', r.minval], ['test', r.maxval], { index: 'forum_search' }).orderBy({ index: 'forum_search' }).run()
-await r.test.getAll('test', { index: 'user_id' }).run()
-await r.test.between(['test', r.minval], ['test', r.maxval], { index: 'user_search' }).orderBy({ index: 'user_search' }).run()
-await r.test.between(10, r.maxval, { index: 'quality' }).orderBy({ index: 'quality' }).run()
-await r.test.getAll(['test', 'hello'], { index: 'identifier' }).run()
+await r.posts.getAll('test', 'another test').run()
+await r.posts.getAll('test', { index: 'forum_id' }).run()
+await r.posts.getAll('tag', { index: 'tags' }).run()
+await r.posts.getAll('tag', 'another tag', { index: 'tags' }).run()
+await r.posts.between(['test', r.minval], ['test', r.maxval], { index: 'forum_search' }).orderBy({ index: 'forum_search' }).run()
+await r.posts.getAll('test', { index: 'user_id' }).run()
+await r.posts.between(['test', r.minval], ['test', r.maxval], { index: 'user_search' }).orderBy({ index: 'user_search' }).run()
+await r.posts.between(10, r.maxval, { index: 'quality' }).orderBy({ index: 'quality' }).run()
+await r.posts.getAll(['test', 'hello'], { index: 'identifier' }).run()
+await r.posts.update(prev => ({ name: 'new', tags: prev('tags').add('hello') })).run()
 
 await r.getPoolMaster()?.drain()

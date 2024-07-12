@@ -1,12 +1,22 @@
 {
   "name": "rethinkdb-ts-extra",
-  "version": "0.1.1",
-  "description": "rethinkdb-ts with extra utilities for typing and structure upgrading",
+  "version": "0.2.0",
+  "description": "rethinkdb-ts with extra utilities for typing and structure syncing",
   "type": "module",
   "main": "dist/index.js",
   "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./future": {
+      "types": "./src/future.ts",
+      "default": "./dist/future.js"
+    }
+  },
   "scripts": {
-    "lint": "ts-standard --fix",
+    "lint": "eslint .",
     "build": "tsc"
   },
   "repository": {
@@ -20,9 +30,9 @@
   "author": "dawnniie",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^20.12.7",
-    "ts-standard": "^12.0.2",
-    "typescript": "^5.4.5"
+    "@types/node": "^20.14.10",
+    "eslint-config-love": "^54.0.0",
+    "typescript": "^5.5.3"
   },
   "dependencies": {
     "rethinkdb-ts": "^2.6.0"
