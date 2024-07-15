@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4
+
+Quick fix for build.
+
 ## 0.2.3
 
 - Fixed `orderBy` return type when used on `RTableExtra` and `RSelectionExtra`.

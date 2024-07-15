@@ -24,7 +24,11 @@ async function extra<const Configs extends RDatabaseExtraConfigs, const DefaultD
   const r = _r as RExtra<Configs, DefaultDB>
 
   const oldConfigs: { [name: string]: ExtraTableConfig<any, ExtraTableConfigIndexBase<any>> } = {}
-  for (const d in configs) for (const t in configs[d]) oldConfigs[`${d}.${t}`] = { ...configs[d][t]!, db: d, table: t }
+  for (const [dbName, tables] of Object.entries(configs)) {
+    for (const [tableName, data] of Object.entries(tables)) {
+      oldConfigs[`${dbName}.${tableName}`] = { ...data, db: dbName, table: tableName }
+    }
+  }
 
   r.extra = {
     connect: (options?: ConnectOptions<DefaultDB>) => connect(r, options),
