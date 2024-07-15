@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.2
+
+- Added `Previous` generic to `update` and `replace` methods, allowing for a different 'previous' type in mapping functions, and enforcing removal of old properties.
+- Updated `r.empty()` to return a new `Empty` type.
+- Improved consistency of optional behaviours in `update`: by first unioning `Empty` to all optional properties, and then making all properties both optional and undefined-able.
+- Updated `sync` to allow calling with no options object at all.
+
+#### `rethinkdb-ts-extra/future`
+
+- Renamed `r.structureSync` to `r.extra.sync` (less pollution of the top level).
+- Added `r.extra.connect`, accepting the same custom options as the connect parameter in `extra()`.
+- Removed `r.empty()` in favour of adjusting the type for `r.literal()` (to return `Empty` too).
+- Moved custom connection options/logic to dedicated file.
+- Fixed a bug where defaultDb would not be validated when the user was manually connecting.
+
 ## 0.2.1
 
 - Re-introduced lost call signatures for some types.

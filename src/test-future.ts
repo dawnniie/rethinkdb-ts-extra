@@ -29,6 +29,14 @@ const r = await extra(
   { memory: { db: 'my_database', table: 'sync', id: 'sync' }, log: 'actions' }
 )
 
+// @ts-expect-error
+await r.$('posts').insert({ id: '_', forum_id: '_', from_user_id: '_', to_user_id: '_', likes: 1, tags: [], name: undefined }).run()
+await r.$('posts').update({ name: 'test' }).run()
+await r.$('posts').update({ name: undefined }).run()
+console.log(await r.$('posts').run())
+await r.$('posts').update({ name: r.literal() }).run()
+console.log(await r.$('posts').run())
+
 await r.$('posts').getAll('test', 'another test').run()
 await r.$('posts').getAll('test', { index: 'forum_id' }).run()
 await r.$('posts').getAll('tag', { index: 'tags' }).run()
@@ -39,9 +47,11 @@ await r.$('posts').between(['test', r.minval], ['test', r.maxval], { index: 'use
 await r.$('posts').between(10, r.maxval, { index: 'quality' }).orderBy({ index: 'quality' }).run()
 await r.$('posts').getAll(['test', 'hello'], { index: 'identifier' }).run()
 await r.$('posts').update(prev => ({ name: 'new', tags: prev('tags').add('hello') })).run()
+await r.$('posts').update<SillyPost & { old_likes: number }>(prev => ({ likes: prev('old_likes'), old_likes: r.literal() })).run()
 await r.table('posts').get('test').run()
 await r.db('my_database_2').table('plain_table').get(12).run()
 await r.$('my_database_2', 'plain_table').get(12).run()
+await r.$('posts').delete().run()
 
 await r.getPoolMaster()?.drain()
 

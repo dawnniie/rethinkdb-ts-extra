@@ -1,7 +1,7 @@
 import { createSyncer } from './sync.js'
 import { r } from 'rethinkdb-ts'
 import type { ExtraTableConfigIndexBase } from './indexes.js'
-import type { ExtraTableConfig, ExtraTableConfigTypeBase, RTableExtra } from './types.js'
+import type { Empty, ExtraTableConfig, ExtraTableConfigTypeBase, RTableExtra } from './types.js'
 
 /**
  * Constructs an object that is used in `attachConfigurations`, and does so with some nice intellisence autocomplete.
@@ -43,7 +43,7 @@ type Re<Configs extends { [name: string]: ExtraTableConfig<any, any> }> = typeof
     /** Wrap around an index name to perform orderBy in reverse */
     desc<T>(index: T): T,
     /** A typescript-friendly way of clearing a field using `re.literal()` */
-    empty(): undefined
+    empty(): Empty
   }
 
 interface AttachConfigurationsReturnType<Configs extends { [name: string]: ExtraTableConfig<any, any> }> { r: Re<Configs>, sync: ReturnType<typeof createSyncer> }

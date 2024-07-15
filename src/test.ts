@@ -2,7 +2,7 @@ import { attachConfigurations, configure } from './index.js'
 
 export interface SillyPost {
   id: string,
-  name: string,
+  name?: string,
   forum_id: string,
   from_user_id: string,
   to_user_id: string,

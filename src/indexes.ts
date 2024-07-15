@@ -1,7 +1,7 @@
-import type { ExtraTableConfig, ExtraTableConfigTypeBase } from './types.js'
+import type { Distinct, ExtraTableConfig, ExtraTableConfigTypeBase } from './types.js'
 import type { RDatum, RValue } from 'rethinkdb-ts'
 
-export type PrimaryIndex = '_PRIMARY'
+export type PrimaryIndex = Distinct<string, 'PRIMARY_KEY'>
 interface ExtraTableConfigIndexSingleOrMulti { multi?: true }
 interface ExtraTableConfigIndexCompound<T extends ExtraTableConfigTypeBase> { compound: ReadonlyArray<keyof T> }
 interface ExtraTableConfigIndexCustom<T extends ExtraTableConfigTypeBase> { custom: (row: RDatum<T>) => RDatum<any> | ReadonlyArray<RDatum<any>> }

@@ -35,120 +35,122 @@ function diff<T> (previous: T[], current: T[]): { added: T[], removed: T[] } {
 }
 
 export function createSyncer (r: R, configs: { [name: string]: ExtraTableConfig<any, ExtraTableConfigIndexBase<any>> }) {
-  return async (options: SyncOptions): Promise<SyncReturnType> => {
-    const actions: SyncAction[] = []
+  return async (options: SyncOptions = {}) => await sync(r, configs, options)
+}
 
-    const databases = await r.dbList().run()
-    const databasesInConfig = [...new Set(Object.values(configs).map(config => config.db))]
+export async function sync(r: R, configs: { [name: string]: ExtraTableConfig<any, ExtraTableConfigIndexBase<any>> }, options: SyncOptions = {}): Promise<SyncReturnType> {
+  const actions: SyncAction[] = []
 
-    let oldHash: string | null = null
-    let newHash: string | null = null
-    if (options.memory) {
-      if (options.log === 'verbose') console.log('db sync: memory option enabled, initiating hash comparison.')
-      const { db: mdb, table: mtable, id: mid } = options.memory
+  const databases = await r.dbList().run()
+  const databasesInConfig = [...new Set(Object.values(configs).map(config => config.db))]
 
-      if (!databases.includes(mdb)) {
-        await r.dbCreate(mdb).run()
-        if (databasesInConfig.includes(mdb)) actions.push({ entity: 'database', action: 'create', name: mdb })
-      }
-      const tables = await r.db(mdb).tableList().run()
-      if (!tables.includes(mtable)) await r.db(mdb).tableCreate(mtable).run()
-      const data = await r.db(mdb).table(mtable).get(mid).run() as unknown
-  
-      oldHash = typeof data === 'object' && (data !== null) && 'h' in data && typeof data.h === 'string' ? data.h : null
-      if (options.log === 'verbose') console.log('db sync: previous sync hash:', oldHash)
-      newHash = options.memory.hashGenerator ? options.memory.hashGenerator(configs) : createHash('sha1').update(JSON.stringify(configs)).digest('hex')
-      if (options.log === 'verbose') console.log('db sync: new sync hash:', newHash)
-      const alreadySynced = oldHash && (options.memory.hashComparison ? options.memory.hashComparison(oldHash, newHash) : oldHash === newHash)
-      if (alreadySynced) {
-        if (options.log === 'verbose') console.log('db sync: hashes equal, sync skipped.')
-        return { skipped: true, actions }
-      } else {
-        if (options.log === 'verbose') console.log('db sync: inconsistent hashes, continuing...')
-      }
+  let oldHash: string | null = null
+  let newHash: string | null = null
+  if (options.memory) {
+    if (options.log === 'verbose') console.log('db sync: memory option enabled, initiating hash comparison.')
+    const { db: mdb, table: mtable, id: mid } = options.memory
+
+    if (!databases.includes(mdb)) {
+      await r.dbCreate(mdb).run()
+      if (databasesInConfig.includes(mdb)) actions.push({ entity: 'database', action: 'create', name: mdb })
     }
+    const tables = await r.db(mdb).tableList().run()
+    if (!tables.includes(mtable)) await r.db(mdb).tableCreate(mtable).run()
+    const data = await r.db(mdb).table(mtable).get(mid).run() as unknown
 
-    if (options.log === 'verbose') console.log('db sync: running...')
-
-    const databasesDiff = diff(databases.filter(db => db !== options.memory?.db), databasesInConfig.filter(db => db !== options.memory?.db))
-
-    for (const database of databasesDiff.added) {
-      actions.push({ entity: 'database', action: 'create', name: database })
-      await r.dbCreate(database).run()
+    oldHash = typeof data === 'object' && (data !== null) && 'h' in data && typeof data.h === 'string' ? data.h : null
+    if (options.log === 'verbose') console.log('db sync: previous sync hash:', oldHash)
+    newHash = options.memory.hashGenerator ? options.memory.hashGenerator(configs) : createHash('sha1').update(JSON.stringify(configs)).digest('hex')
+    if (options.log === 'verbose') console.log('db sync: new sync hash:', newHash)
+    const alreadySynced = oldHash && (options.memory.hashComparison ? options.memory.hashComparison(oldHash, newHash) : oldHash === newHash)
+    if (alreadySynced) {
+      if (options.log === 'verbose') console.log('db sync: hashes equal, sync skipped.')
+      return { skipped: true, actions }
+    } else {
+      if (options.log === 'verbose') console.log('db sync: inconsistent hashes, continuing...')
     }
-
-    if (options.dropUnknownDatabases === true) {
-      for (const database of databasesDiff.removed) {
-        actions.push({ entity: 'database', action: 'drop', name: database })
-        await r.dbDrop(database).run()
-      }
-    }
-
-    for (const database of databasesInConfig) {
-      if (options.log === 'verbose') console.log(`db sync: syncing database ${database}...`)
-
-      const tables = await r.db(database).tableList().run()
-      const tablesInConfig = Object.values(configs).filter(c => c.db === database).map(c => c.table)
-      const tablesDiff = diff(tables.filter(table => table !== options.memory?.table), tablesInConfig)
-
-      for (const table of tablesDiff.added) {
-        actions.push({ entity: 'table', action: 'create', name: `${database}.${table}` })
-        await r.db(database).tableCreate(table).run()
-      }
-
-      if (options.dropUnknownTables === true) {
-        for (const table of tablesDiff.removed) {
-          actions.push({ entity: 'table', action: 'drop', name: `${database}.${table}` })
-          await r.db(database).tableDrop(table).run()
-        }
-      }
-
-      for (const table of tablesInConfig) {
-        const tableConfig = Object.values(configs).find(c => c.db === database && c.table === table)
-        if (tableConfig === undefined) continue
-
-        const indexes = await r.db(database).table(table).indexList().run()
-        const indexesInConfig = Object.keys(tableConfig.indexes)
-        const indexesDiff = diff(indexes, indexesInConfig)
-
-        for (const index of indexesDiff.added) {
-          actions.push({ entity: 'index', action: 'create', name: `${database}.${table}:${index}` })
-
-          const indexConfig = tableConfig.indexes[index]
-          if (indexConfig === undefined) continue
-          const multi = 'multi' in indexConfig ? indexConfig.multi : false
-
-          if ('custom' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.custom, { multi }).run()
-          else if ('compound' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.compound.map(f => r.row(f as string))).run()
-          else await r.db(database).table(table).indexCreate(index, { multi }).run()
-
-          await r.db(database).table(table).indexWait(index).run()
-        }
-
-        if (options.dropUnknownIndexes === true) {
-          for (const index of indexesDiff.removed) {
-            actions.push({ entity: 'index', action: 'drop', name: `${database}.${table}:${index}` })
-            await r.db(database).table(table).indexDrop(index).run()
-          }
-        }
-      }
-    }
-
-    if (options.log === 'verbose') console.log('db sync: sync complete.')
-
-    if (options.memory && newHash) {
-      const { db: mdb, table: mtable, id: mid } = options.memory
-
-      if (oldHash === null) await r.db(mdb).table(mtable).insert({ id: mid, h: newHash }).run()
-      else await r.db(mdb).table(mtable).get(mid).update({ h: newHash }).run()
-      if (options.log === 'verbose') console.log('db sync: memory option enabled, new hash saved.')
-    }
-
-    if (actions.length && options.log) {
-      console.log(`--- db sync complete, performed ${actions.length} actions ---`)
-      for (const action of actions) console.log(`- ${action.action.toUpperCase()} ${action.entity} ${action.name}`)
-    }
-
-    return { skipped: false, actions }
   }
+
+  if (options.log === 'verbose') console.log('db sync: running...')
+
+  const databasesDiff = diff(databases.filter(db => db !== options.memory?.db), databasesInConfig.filter(db => db !== options.memory?.db))
+
+  for (const database of databasesDiff.added) {
+    actions.push({ entity: 'database', action: 'create', name: database })
+    await r.dbCreate(database).run()
+  }
+
+  if (options.dropUnknownDatabases === true) {
+    for (const database of databasesDiff.removed) {
+      actions.push({ entity: 'database', action: 'drop', name: database })
+      await r.dbDrop(database).run()
+    }
+  }
+
+  for (const database of databasesInConfig) {
+    if (options.log === 'verbose') console.log(`db sync: syncing database ${database}...`)
+
+    const tables = await r.db(database).tableList().run()
+    const tablesInConfig = Object.values(configs).filter(c => c.db === database).map(c => c.table)
+    const tablesDiff = diff(tables.filter(table => table !== options.memory?.table), tablesInConfig)
+
+    for (const table of tablesDiff.added) {
+      actions.push({ entity: 'table', action: 'create', name: `${database}.${table}` })
+      await r.db(database).tableCreate(table).run()
+    }
+
+    if (options.dropUnknownTables === true) {
+      for (const table of tablesDiff.removed) {
+        actions.push({ entity: 'table', action: 'drop', name: `${database}.${table}` })
+        await r.db(database).tableDrop(table).run()
+      }
+    }
+
+    for (const table of tablesInConfig) {
+      const tableConfig = Object.values(configs).find(c => c.db === database && c.table === table)
+      if (tableConfig === undefined) continue
+
+      const indexes = await r.db(database).table(table).indexList().run()
+      const indexesInConfig = Object.keys(tableConfig.indexes)
+      const indexesDiff = diff(indexes, indexesInConfig)
+
+      for (const index of indexesDiff.added) {
+        actions.push({ entity: 'index', action: 'create', name: `${database}.${table}:${index}` })
+
+        const indexConfig = tableConfig.indexes[index]
+        if (indexConfig === undefined) continue
+        const multi = 'multi' in indexConfig ? indexConfig.multi : false
+
+        if ('custom' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.custom, { multi }).run()
+        else if ('compound' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.compound.map(f => r.row(f as string))).run()
+        else await r.db(database).table(table).indexCreate(index, { multi }).run()
+
+        await r.db(database).table(table).indexWait(index).run()
+      }
+
+      if (options.dropUnknownIndexes === true) {
+        for (const index of indexesDiff.removed) {
+          actions.push({ entity: 'index', action: 'drop', name: `${database}.${table}:${index}` })
+          await r.db(database).table(table).indexDrop(index).run()
+        }
+      }
+    }
+  }
+
+  if (options.log === 'verbose') console.log('db sync: sync complete.')
+
+  if (options.memory && newHash) {
+    const { db: mdb, table: mtable, id: mid } = options.memory
+
+    if (oldHash === null) await r.db(mdb).table(mtable).insert({ id: mid, h: newHash }).run()
+    else await r.db(mdb).table(mtable).get(mid).update({ h: newHash }).run()
+    if (options.log === 'verbose') console.log('db sync: memory option enabled, new hash saved.')
+  }
+
+  if (actions.length && options.log) {
+    console.log(`--- db sync complete, performed ${actions.length} actions ---`)
+    for (const action of actions) console.log(`- ${action.action.toUpperCase()} ${action.entity} ${action.name}`)
+  }
+
+  return { skipped: false, actions }
 }
