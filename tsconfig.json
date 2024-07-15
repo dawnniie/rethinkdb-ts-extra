@@ -5,7 +5,7 @@
 
     "moduleResolution": "NodeNext",
     "module": "NodeNext",
-    "target": "ESNext",
+    "target": "ES2022",
     "lib": ["ESNext"],
     "outDir": "dist",
 

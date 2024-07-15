@@ -6,10 +6,13 @@ import type { FieldSelector, InsertOptions, MasterPool, R, RDatabase, RDatum, RS
 export type Distinct<T, UniqueName> = T & { __UNIQUE__: UniqueName }
 export type Empty = Distinct<string, 'set to r.literal()'>
 
+// @ts-expect-error to not break older runtimes that don't support ERM
+Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose')
+
 type DistOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never
-type DeepPartial<T> = T | { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepPartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepPartial<U2>> : DeepPartial<T[P]>) | undefined }
+type DeepPartial<T> = T | { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepPartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepPartial<U2>> : never) | DeepPartial<T[P]> | undefined }
 type DeepValue<T> = RDatum<T> | (T extends object ? { [P in keyof T]: T[P] extends Array<infer U1> ? Array<DeepValue<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValue<U2>> : DeepValue<T[P]> } : T)
-type DeepValuePartial<T> = RDatum<T> | (T extends object ? { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepValuePartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValuePartial<U2>> : DeepValuePartial<T[P]>) | undefined } : T)
+type DeepValuePartial<T> = RDatum<T> | (T extends object ? { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepValuePartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValuePartial<U2>> : never) | DeepValuePartial<T[P]> | undefined } : T)
 type PushEmpty<T> = { [K in keyof T]: unknown extends T[K] ? unknown : T[K] extends Exclude<T[K], undefined> ? PushEmpty<T[K]> : PushEmpty<T[K]> | Empty }
 
 /** see: https://github.com/rethinkdb/rethinkdb/issues/2884#issuecomment-65291774 */
@@ -33,7 +36,7 @@ export type RStreamExtra<Config extends ExtraTableConfig<any, any>, T> = Omit<RS
 export type RSingleSelectionExtra<_Config extends ExtraTableConfig<any, any>, T> = Omit<RSingleSelection<T>, 'update' | 'replace'> & {
   <A extends keyof T>(attribute: RValue<A>): RDatum<T[A]>,
   
-  update(obj: RValue<DeepPartial<PushEmpty<T>>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
+  update<Previous = T>(obj: RValue<DeepPartial<PushEmpty<T>>> & { [K in Exclude<keyof Previous, keyof T>]: Empty }, options?: UpdateOptions): RDatum<WriteResult<T>>,
   update<Previous = T>(
     updater: (previous: RDatum<Previous>) => DeepValuePartial<PushEmpty<T>> & { [K in Exclude<keyof Previous, keyof T>]: Empty },
     options?: UpdateOptions
@@ -47,7 +50,7 @@ export type RSelectionExtra<Config extends ExtraTableConfig<any, any>, T> = Omit
   <A extends keyof T>(attribute: RValue<A>): RStreamExtra<Config, T[A]>,
   (n: RValue<number>): RDatum<T>,
   
-  update(obj: RValue<DeepPartial<PushEmpty<T>>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
+  update<Previous = T>(obj: RValue<DeepPartial<PushEmpty<T>>> & { [K in Exclude<keyof Previous, keyof T>]: Empty }, options?: UpdateOptions): RDatum<WriteResult<T>>,
   update<Previous = T>(
     updater: (previous: RDatum<Previous>) => DeepValuePartial<PushEmpty<T>> & { [K in Exclude<keyof Previous, keyof T>]: Empty },
     options?: UpdateOptions
@@ -56,7 +59,7 @@ export type RSelectionExtra<Config extends ExtraTableConfig<any, any>, T> = Omit
   replace(obj: RValue<T>, options?: UpdateOptions): RDatum<WriteResult<T>>,
   replace<Previous = T>(replacer: (previous: RDatum<Previous>) => RValue<DeepValue<T>>, options?: UpdateOptions): RDatum<WriteResult<T>>,
 
-  orderBy(...fieldOrIndex: Array<FieldSelector<T> | { index: keyof Config['indexes'] }>): RStreamExtra<Config, T>
+  orderBy(...fieldOrIndex: Array<FieldSelector<T> | { index: keyof Config['indexes'] }>): RSelectionExtra<Config, T>
 }
 
 export type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable<Config['type']>, 'get' | 'getAll' | 'between' | 'insert' | 'update' | 'replace' | 'orderBy'> & {
@@ -81,7 +84,7 @@ export type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable
     options?: InsertOptions
   ): RDatum<WriteResult<Config['type']>>,
 
-  update(obj: RValue<DeepPartial<PushEmpty<Config['type']>>>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
+  update<Previous = Config['type']>(obj: RValue<DeepPartial<PushEmpty<Config['type']>>> & { [K in Exclude<keyof Previous, keyof Config['type']>]: Empty }, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
   update<Previous = Config['type']>(
     updater: (previous: RDatum<Previous>) => DeepValuePartial<PushEmpty<Config['type']>> & { [K in Exclude<keyof Previous, keyof Config['type']>]: Empty },
     options?: UpdateOptions
@@ -90,7 +93,7 @@ export type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable
   replace(obj: RValue<Config['type']>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
   replace<Previous = Config['type']>(replacer: (previous: RDatum<Previous>) => RValue<DeepValue<Config['type']>>, options?: UpdateOptions): RDatum<WriteResult<Config['type']>>,
 
-  orderBy(...fieldOrIndex: Array<FieldSelector<Config['type']> | { index: keyof Config['indexes'] }>): RStreamExtra<Config, Config['type']>
+  orderBy(...fieldOrIndex: Array<FieldSelector<Config['type']> | { index: keyof Config['indexes'] }>): RTableExtra<Config>
 }
 
 export type RDatabaseExtraConfigs = Record<string, Record<string, ExtraTableConfig<any, any>>>
@@ -106,6 +109,7 @@ export type RExtra<Configs extends RDatabaseExtraConfigs, DefaultDB extends stri
   literal<T>(obj: T): RDatum<T>,
 
   db<D extends keyof Configs>(dbName: D): RDatabaseExtra<Configs, D>,
+  db(dbName: string): RDatabase,
   table<T extends (DefaultDB extends keyof Configs ? keyof Configs[DefaultDB] : string)>(tableName: T): DefaultDB extends keyof Configs ? RTableExtra<Configs[DefaultDB][T]> : RTable,
 
   extra: {
@@ -113,5 +117,7 @@ export type RExtra<Configs extends RDatabaseExtraConfigs, DefaultDB extends stri
     sync(options?: SyncOptions): Promise<SyncReturnType>
   },
   $<T extends (DefaultDB extends keyof Configs ? keyof Configs[DefaultDB] : string)>(tableName: T): DefaultDB extends keyof Configs ? RTableExtra<Configs[DefaultDB][T]> : RTable,
-  $<D extends keyof Configs, T extends keyof Configs[D]>(dbName: D, tableName: T): RTableExtra<Configs[D][T]>
+  $<D extends keyof Configs, T extends keyof Configs[D]>(dbName: D, tableName: T): RTableExtra<Configs[D][T]>,
+
+  [Symbol.asyncDispose](): Promise<void>
 }

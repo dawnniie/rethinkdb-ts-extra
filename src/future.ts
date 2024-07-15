@@ -33,6 +33,8 @@ async function extra<const Configs extends RDatabaseExtraConfigs, const DefaultD
 
   // @ts-expect-error type otherwise defined
   r.$ = (dbName: string, tableName?: string) => tableName ? r.db(dbName).table(tableName) : r.table(dbName)
+
+  r[Symbol.asyncDispose] = async () => await r.getPoolMaster()?.drain()
   
   if (defaultDbOrConnect && typeof defaultDbOrConnect !== 'string') {
     // we should connect for the user

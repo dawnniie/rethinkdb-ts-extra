@@ -23,7 +23,7 @@ const tableConfig = {
   }
 }
 
-const r = await extra(
+await using r = await extra(
   tableConfig,
   { url: 'rethinkdb://localhost:28015', db: 'my_database' },
   { memory: { db: 'my_database', table: 'sync', id: 'sync' }, log: 'actions' }
@@ -52,6 +52,3 @@ await r.table('posts').get('test').run()
 await r.db('my_database_2').table('plain_table').get(12).run()
 await r.$('my_database_2', 'plain_table').get(12).run()
 await r.$('posts').delete().run()
-
-await r.getPoolMaster()?.drain()
-

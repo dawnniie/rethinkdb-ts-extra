@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.3
+
+- Fixed `orderBy` return type when used on `RTableExtra` and `RSelectionExtra`.
+- Further added `Previous` generic to non-replacement-function (just object literal) `update` method.
+- Fixed (hopefully) some nested array/datum typing issues.
+
+#### `rethinkdb-ts-extra/future`
+
+- Added support for TS 5.2 'using' (ERM): `await using r = extra(...)`.
+- Added an 'escape' back to regular `rethinkdb-ts` when specifying an unknown database in `r.db`.
+
 ## 0.2.2
 
 - Added `Previous` generic to `update` and `replace` methods, allowing for a different 'previous' type in mapping functions, and enforcing removal of old properties.

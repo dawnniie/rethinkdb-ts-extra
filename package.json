@@ -1,6 +1,6 @@
 {
   "name": "rethinkdb-ts-extra",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "rethinkdb-ts with extra utilities for typing and structure syncing",
   "type": "module",
   "main": "dist/index.js",
