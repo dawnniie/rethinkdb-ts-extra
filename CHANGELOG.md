@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- Updated index value inputs (`between`, `getAll`) to allow deep/nested RValues.
+- Removed `null` union from `update` & `replace` methods on single selections (from `.get`).
+
 ## 0.2.4
 
 Quick fix for build.

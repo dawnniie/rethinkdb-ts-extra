@@ -11,7 +11,7 @@ Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose')
 
 type DistOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never
 type DeepPartial<T> = T | { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepPartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepPartial<U2>> : never) | DeepPartial<T[P]> | undefined }
-type DeepValue<T> = RDatum<T> | (T extends object ? { [P in keyof T]: T[P] extends Array<infer U1> ? Array<DeepValue<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValue<U2>> : DeepValue<T[P]> } : T)
+export type DeepValue<T> = RDatum<T> | (T extends object ? { [P in keyof T]: T[P] extends Array<infer U1> ? Array<DeepValue<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValue<U2>> : DeepValue<T[P]> } : T)
 type DeepValuePartial<T> = RDatum<T> | (T extends object ? { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepValuePartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValuePartial<U2>> : never) | DeepValuePartial<T[P]> | undefined } : T)
 type PushEmpty<T> = { [K in keyof T]: unknown extends T[K] ? unknown : T[K] extends Exclude<T[K], undefined> ? PushEmpty<T[K]> : PushEmpty<T[K]> | Empty }
 
@@ -33,17 +33,17 @@ export type RStreamExtra<Config extends ExtraTableConfig<any, any>, T> = Omit<RS
   orderBy(...fieldOrIndex: Array<FieldSelector<T> | { index: keyof Config['indexes'] }>): RStreamExtra<Config, T>
 }
 
-export type RSingleSelectionExtra<_Config extends ExtraTableConfig<any, any>, T> = Omit<RSingleSelection<T>, 'update' | 'replace'> & {
+export type RSingleSelectionExtra<_Config extends ExtraTableConfig<any, any>, T, TN = Exclude<T, null>> = Omit<RSingleSelection<T>, 'update' | 'replace'> & {
   <A extends keyof T>(attribute: RValue<A>): RDatum<T[A]>,
   
-  update<Previous = T>(obj: RValue<DeepPartial<PushEmpty<T>>> & { [K in Exclude<keyof Previous, keyof T>]: Empty }, options?: UpdateOptions): RDatum<WriteResult<T>>,
-  update<Previous = T>(
-    updater: (previous: RDatum<Previous>) => DeepValuePartial<PushEmpty<T>> & { [K in Exclude<keyof Previous, keyof T>]: Empty },
+  update<Previous = TN>(obj: RValue<DeepPartial<PushEmpty<TN>>> & { [K in Exclude<keyof Previous, keyof TN>]: Empty }, options?: UpdateOptions): RDatum<WriteResult<T>>,
+  update<Previous = TN>(
+    updater: (previous: RDatum<Previous>) => DeepValuePartial<PushEmpty<TN>> & { [K in Exclude<keyof Previous, keyof TN>]: Empty },
     options?: UpdateOptions
   ): RDatum<WriteResult<T>>,
 
-  replace(obj: RValue<T>, options?: UpdateOptions): RDatum<WriteResult<T>>,
-  replace<Previous = T>(replacer: (previous: RDatum<Previous>) => RValue<DeepValue<T>>, options?: UpdateOptions): RDatum<WriteResult<T>>
+  replace(obj: RValue<TN>, options?: UpdateOptions): RDatum<WriteResult<T>>,
+  replace<Previous = TN>(replacer: (previous: RDatum<Previous>) => RValue<DeepValue<TN>>, options?: UpdateOptions): RDatum<WriteResult<T>>
 }
 
 export type RSelectionExtra<Config extends ExtraTableConfig<any, any>, T> = Omit<RSelection<T>, 'update' | 'replace' | 'orderBy'> & {
