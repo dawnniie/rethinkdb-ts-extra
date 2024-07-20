@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6
+
+- Made slight adjustments to DeepValue and DeDatumToValue, hopefully fixing some bugs.
+- Moved util types to dedicated file.
+
 ## 0.2.5
 
 - Updated index value inputs (`between`, `getAll`) to allow deep/nested RValues.

@@ -1,7 +1,8 @@
 import { createSyncer } from './sync.js'
 import { r } from 'rethinkdb-ts'
 import type { ExtraTableConfigIndexBase } from './indexes.js'
-import type { Empty, ExtraTableConfig, ExtraTableConfigTypeBase, RTableExtra } from './types.js'
+import type { ExtraTableConfig, ExtraTableConfigTypeBase, RTableExtra } from './types.js'
+import type { Empty } from './util.js'
 
 /**
  * Constructs an object that is used in `attachConfigurations`, and does so with some nice intellisence autocomplete.

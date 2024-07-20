@@ -1,19 +1,8 @@
 import type { ConnectOptions } from './connect.js'
 import type { ExtraTableConfigIndexBase, PrimaryIndex, QueryForIndex } from './indexes.js'
 import type { SyncOptions, SyncReturnType } from './sync.js'
+import type { DeepPartial, DeepValue, DeepValuePartial, DistOmit, Empty, PushEmpty } from './util.js'
 import type { FieldSelector, InsertOptions, MasterPool, R, RDatabase, RDatum, RSelection, RSingleSelection, RStream, RTable, RValue, UpdateOptions, WriteResult } from 'rethinkdb-ts'
-
-export type Distinct<T, UniqueName> = T & { __UNIQUE__: UniqueName }
-export type Empty = Distinct<string, 'set to r.literal()'>
-
-// @ts-expect-error to not break older runtimes that don't support ERM
-Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose')
-
-type DistOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never
-type DeepPartial<T> = T | { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepPartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepPartial<U2>> : never) | DeepPartial<T[P]> | undefined }
-export type DeepValue<T> = RDatum<T> | (T extends object ? { [P in keyof T]: T[P] extends Array<infer U1> ? Array<DeepValue<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValue<U2>> : DeepValue<T[P]> } : T)
-type DeepValuePartial<T> = RDatum<T> | (T extends object ? { [P in keyof T]?: (T[P] extends Array<infer U1> ? Array<DeepValuePartial<U1>> : T[P] extends ReadonlyArray<infer U2> ? ReadonlyArray<DeepValuePartial<U2>> : never) | DeepValuePartial<T[P]> | undefined } : T)
-type PushEmpty<T> = { [K in keyof T]: unknown extends T[K] ? unknown : T[K] extends Exclude<T[K], undefined> ? PushEmpty<T[K]> : PushEmpty<T[K]> | Empty }
 
 /** see: https://github.com/rethinkdb/rethinkdb/issues/2884#issuecomment-65291774 */
 type AllowedPrimaryKeyTypes = string | number | boolean

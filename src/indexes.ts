@@ -1,4 +1,5 @@
-import type { DeepValue, Distinct, ExtraTableConfig, ExtraTableConfigTypeBase } from './types.js'
+import type { ExtraTableConfig, ExtraTableConfigTypeBase } from './types.js'
+import type { DeDatumToValue, Distinct } from './util.js'
 import type { RDatum, RValue } from 'rethinkdb-ts'
 
 export type PrimaryIndex = Distinct<string, 'PRIMARY_KEY'>
@@ -9,8 +10,6 @@ interface ExtraTableConfigIndexCustomMulti<T extends ExtraTableConfigTypeBase> {
 export interface ExtraTableConfigIndexBase<T extends ExtraTableConfigTypeBase> {
   [index: string]: ExtraTableConfigIndexSingleOrMulti | ExtraTableConfigIndexCompound<T> | ExtraTableConfigIndexCustom<T> | ExtraTableConfigIndexCustomMulti<T>
 }
-
-type DeDatumToValue<T> = T extends RDatum<infer K> ? DeDatumToValue<K> : DeepValue<T>
 
 export type QueryForIndex<Config extends ExtraTableConfig<any, any>, Index extends (keyof Config['indexes'] | PrimaryIndex)> = (
   // First check primary index, this generally happens in default cases etc
