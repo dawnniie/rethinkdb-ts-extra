@@ -62,4 +62,4 @@ async function extra<const Configs extends RDatabaseExtraConfigs, const DefaultD
   return r
 }
 
-export default extra
+export { extra }

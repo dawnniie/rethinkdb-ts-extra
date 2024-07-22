@@ -1,4 +1,4 @@
-import extra, { table } from './future.js'
+import { extra, table } from './future.js'
 import type { SillyPost } from './test.js'
 
 const tableConfig = {
@@ -52,3 +52,5 @@ await r.table('posts').get('test').run()
 await r.db('my_database_2').table('plain_table').get(12).run()
 await r.$('my_database_2', 'plain_table').get(12).run()
 await r.$('posts').delete().run()
+await r.$('posts').orderBy({ index: 'forum_id' }).run()
+await r.$('posts').orderBy({ index: 'DON_T_KNOW_THS_INDEX' }).run()

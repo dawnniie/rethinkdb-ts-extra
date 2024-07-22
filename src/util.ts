@@ -1,7 +1,8 @@
 import type { RDatum } from 'rethinkdb-ts'
 
 export type Distinct<T, UniqueName> = T & { __UNIQUE__: UniqueName }
-export type Empty = Distinct<string, 'set to r.literal()'>
+export type Empty = Distinct<RDatum, 'set to r.literal()'>
+export type RMinMaxVal = Distinct<RDatum, 'minval/maxval'>
 
 // @ts-expect-error to not break older runtimes that don't support ERM
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose')

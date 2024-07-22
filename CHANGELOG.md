@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.7
+
+- Added distinct type for `r.minval` and `r.maxval` so they are always allowed in `between`.
+- Fixed the typing for `getAll` to require at least one value and to only allow `{ index: ... }` as the last argument.
+- Updated `orderBy` to autocomplete but not error if an unknown index is passed.
+
+#### `rethinkdb-ts-extra/future`
+
+- Updated `extra` export to be non-default for consistency.
+- Updated `db` and `table` to autocomplete but not error if unknown values are passed.
+
 ## 0.2.6
 
 - Made slight adjustments to DeepValue and DeDatumToValue, hopefully fixing some bugs.
