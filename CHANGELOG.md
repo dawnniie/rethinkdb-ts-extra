@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8
+
+- Actually updated `r.minval` and `r.maxval` types (oops, forgot).
+- Reverted requirement of one value for `getAll` (broke spread parameter inputs).
+
 ## 0.2.7
 
 - Added distinct type for `r.minval` and `r.maxval` so they are always allowed in `between`.

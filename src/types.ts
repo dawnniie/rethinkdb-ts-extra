@@ -58,11 +58,7 @@ export type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable
   get(key: Config['type']['id'] | RDatum<Config['type']['id']>): RSingleSelectionExtra<Config, Config['type'] | null>,
 
   getAll<I extends (keyof Config['indexes'] | PrimaryIndex) = PrimaryIndex>(
-    ...args: [
-      QueryForIndex<Config, I>,
-      ...QueryForIndex<Config, I>[]
-    ] | [
-      QueryForIndex<Config, I>,
+    ...args: QueryForIndex<Config, I>[] | [
       ...QueryForIndex<Config, I>[],
       { index: I }
     ]
@@ -99,11 +95,13 @@ export type RDatabaseExtra<Configs extends RDatabaseExtraConfigs, Database exten
   table<T extends keyof Configs[Database] | (string & {})>(tableName: T): T extends keyof Configs[Database] ? RTableExtra<Configs[Database][T]> : RTable
 }
 
-export type RExtra<Configs extends RDatabaseExtraConfigs, DefaultDB extends string> = Omit<R, 'asc' | 'desc' | 'literal' | 'db' | 'table'> & {
+export type RExtra<Configs extends RDatabaseExtraConfigs, DefaultDB extends string> = Omit<R, 'asc' | 'desc' | 'literal' | 'minval' | 'maxval' | 'db' | 'table'> & {
   asc<T>(index: T): T,
   desc<T>(index: T): T,
   literal(): Empty,
   literal<T>(obj: T): RDatum<T>,
+  minval: RMinMaxVal,
+  maxval: RMinMaxVal,
 
   db<D extends keyof Configs | (string & {})>(dbName: D): D extends keyof Configs ? RDatabaseExtra<Configs, D> : RDatabase,
   table<T extends (DefaultDB extends keyof Configs ? keyof Configs[DefaultDB] : never) | (string & {})>(tableName: T):
