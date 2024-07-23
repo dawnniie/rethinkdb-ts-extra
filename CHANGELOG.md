@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - The future is now!
+
+The in-dev future implementation of rethinkdb-ts-extra, previously available at `rethinkdb-ts-extra/future`, is now default.
+
+- Everything from `rethinkdb-ts-extra/future`: see previous versions and wiki for details.
+- Removed all code from the old version and cleaned up where possible.
+- Added some more internal documentation.
+- Fixed eslint configuration to actually apply the rule presets (with some sanity changes).
+
 ## 0.2.8
 
 - Actually updated `r.minval` and `r.maxval` types (oops, forgot).

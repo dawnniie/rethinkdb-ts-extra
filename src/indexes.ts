@@ -7,6 +7,7 @@ interface ExtraTableConfigIndexSingleOrMulti { multi?: true }
 interface ExtraTableConfigIndexCompound<T extends ExtraTableConfigTypeBase> { compound: ReadonlyArray<keyof T> }
 interface ExtraTableConfigIndexCustom<T extends ExtraTableConfigTypeBase> { custom: (row: RDatum<T>) => RDatum<any> | ReadonlyArray<RDatum<any>> }
 interface ExtraTableConfigIndexCustomMulti<T extends ExtraTableConfigTypeBase> { multi: true, custom: (row: RDatum<T>) => ReadonlyArray<RDatum<any> | ReadonlyArray<RDatum<any>>> }
+// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
 export interface ExtraTableConfigIndexBase<T extends ExtraTableConfigTypeBase> {
   [index: string]: ExtraTableConfigIndexSingleOrMulti | ExtraTableConfigIndexCompound<T> | ExtraTableConfigIndexCustom<T> | ExtraTableConfigIndexCustomMulti<T>
 }

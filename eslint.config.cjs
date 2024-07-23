@@ -4,25 +4,13 @@ module.exports = [
     files: ['src/**.ts'],
     ignores: ['dist/**', 'node_modules/**'],
     rules: {
-      '@typescript-eslint/member-delimiter-style': ['error', {
-        multiline: {
-          delimiter: 'comma',
-          requireLast: false
-        },
-        singleline: {
-          delimiter: 'comma',
-          requireLast: false
-        }
-      }],
+      ...require('eslint-config-love').rules,
+      '@typescript-eslint/ban-types': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/method-signature-style': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      '@typescript-eslint/consistent-type-imports': 'error',
-      'import/order': ['error', {
-        alphabetize: { order: 'asc', caseInsensitive: true },
-        groups: ['index', 'sibling', 'parent', 'internal', 'external', 'builtin', 'object', 'type']
-      }]
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off'
     }
   }
 ]

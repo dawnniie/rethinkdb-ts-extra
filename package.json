@@ -1,6 +1,6 @@
 {
   "name": "rethinkdb-ts-extra",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "rethinkdb-ts with extra utilities for typing and structure syncing",
   "type": "module",
   "main": "dist/index.js",
@@ -11,8 +11,8 @@
       "default": "./dist/index.js"
     },
     "./future": {
-      "types": "./src/future.ts",
-      "default": "./dist/future.js"
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {

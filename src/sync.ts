@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
-import type { R } from './index.js'
 import type { ExtraTableConfigIndexBase } from './indexes.js'
-import type { ExtraTableConfig } from './types.js'
+import type { RDatabaseExtraConfigs } from './types.js'
+import type { R } from 'rethinkdb-ts'
 
 export interface SyncOptions {
   memory?: {
@@ -34,15 +34,11 @@ function diff<T> (previous: T[], current: T[]): { added: T[], removed: T[] } {
   return result
 }
 
-export function createSyncer (r: R, configs: { [name: string]: ExtraTableConfig<any, ExtraTableConfigIndexBase<any>> }) {
-  return async (options: SyncOptions = {}) => await sync(r, configs, options)
-}
-
-export async function sync(r: R, configs: { [name: string]: ExtraTableConfig<any, ExtraTableConfigIndexBase<any>> }, options: SyncOptions = {}): Promise<SyncReturnType> {
+export async function sync(r: R, configs: RDatabaseExtraConfigs, options: SyncOptions = {}): Promise<SyncReturnType> {
   const actions: SyncAction[] = []
 
   const databases = await r.dbList().run()
-  const databasesInConfig = [...new Set(Object.values(configs).map(config => config.db))]
+  const databasesInConfig = Object.keys(configs)
 
   let oldHash: string | null = null
   let newHash: string | null = null
@@ -91,7 +87,7 @@ export async function sync(r: R, configs: { [name: string]: ExtraTableConfig<any
     if (options.log === 'verbose') console.log(`db sync: syncing database ${database}...`)
 
     const tables = await r.db(database).tableList().run()
-    const tablesInConfig = Object.values(configs).filter(c => c.db === database).map(c => c.table)
+    const tablesInConfig = Object.keys(configs[database] as Record<string, unknown>)
     const tablesDiff = diff(tables.filter(table => table !== options.memory?.table), tablesInConfig)
 
     for (const table of tablesDiff.added) {
@@ -107,18 +103,18 @@ export async function sync(r: R, configs: { [name: string]: ExtraTableConfig<any
     }
 
     for (const table of tablesInConfig) {
-      const tableConfig = Object.values(configs).find(c => c.db === database && c.table === table)
-      if (tableConfig === undefined) continue
+      const tableConfig = configs[database]?.[table]
+      if (!tableConfig) continue
 
       const indexes = await r.db(database).table(table).indexList().run()
-      const indexesInConfig = Object.keys(tableConfig.indexes)
+      const indexesInConfig = Object.keys(tableConfig.indexes as Record<string, unknown>)
       const indexesDiff = diff(indexes, indexesInConfig)
 
       for (const index of indexesDiff.added) {
         actions.push({ entity: 'index', action: 'create', name: `${database}.${table}:${index}` })
 
-        const indexConfig = tableConfig.indexes[index]
-        if (indexConfig === undefined) continue
+        const indexConfig = tableConfig.indexes[index] as ExtraTableConfigIndexBase<any>[string]
+        if (!indexConfig) continue
         const multi = 'multi' in indexConfig ? indexConfig.multi : false
 
         if ('custom' in indexConfig) await r.db(database).table(table).indexCreate(index, indexConfig.custom, { multi }).run()

@@ -9,8 +9,6 @@ type AllowedPrimaryKeyTypes = string | number | boolean
 export interface ExtraTableConfigTypeBase { id: AllowedPrimaryKeyTypes | AllowedPrimaryKeyTypes[] }
 
 export interface ExtraTableConfig<T extends ExtraTableConfigTypeBase, I extends ExtraTableConfigIndexBase<T>> {
-  db: string,
-  table: string,
   type: T,
   indexes: I
 }
@@ -58,8 +56,8 @@ export type RTableExtra<Config extends ExtraTableConfig<any, any>> = Omit<RTable
   get(key: Config['type']['id'] | RDatum<Config['type']['id']>): RSingleSelectionExtra<Config, Config['type'] | null>,
 
   getAll<I extends (keyof Config['indexes'] | PrimaryIndex) = PrimaryIndex>(
-    ...args: QueryForIndex<Config, I>[] | [
-      ...QueryForIndex<Config, I>[],
+    ...args: Array<QueryForIndex<Config, I>> | [
+      ...Array<QueryForIndex<Config, I>>,
       { index: I }
     ]
   ): RSelectionExtra<Config, Config['type']>,
@@ -108,9 +106,21 @@ export type RExtra<Configs extends RDatabaseExtraConfigs, DefaultDB extends stri
     DefaultDB extends keyof Configs ? T extends keyof Configs[DefaultDB] ? RTableExtra<Configs[DefaultDB][T]> : RTable : RTable,
 
   extra: {
+    /**
+     * Initialise a RethinkDB connection. Uses `r.connectPool` internally with almost the same options, but some extra validation.
+     * 
+     * Also accepts a 'url' option, which is a PostgresQL-like connection url to locate the server.
+     */
     connect(options?: ConnectOptions<DefaultDB>): Promise<MasterPool>,
+    /**
+     * Synchronises the connected database to match your database configuration, creating dbs, tables, and indexes where necessary.
+     */
     sync(options?: SyncOptions): Promise<SyncReturnType>
   },
+
+  /**
+   * Shorthand syntax for selecting a table instead of `r.db('...').table('...')`.
+   */
   $<T extends (DefaultDB extends keyof Configs ? keyof Configs[DefaultDB] : string)>(tableName: T): DefaultDB extends keyof Configs ? RTableExtra<Configs[DefaultDB][T]> : RTable,
   $<D extends keyof Configs, T extends keyof Configs[D]>(dbName: D, tableName: T): RTableExtra<Configs[D][T]>,
 

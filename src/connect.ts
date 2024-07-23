@@ -55,8 +55,8 @@ export async function connect<_Configs extends RDatabaseExtraConfigs, DefaultDB 
     const noScheme = url.startsWith('r') ? url.replace('rethinkdb://', '') : url.replace('//', '')
     const [auth, location] = noScheme.includes('@') ? noScheme.split('@') as [string, string] : [undefined, noScheme]
     let [user, password] = auth?.split(':') ?? [undefined, undefined]
-    const host = (!location || location.startsWith(':') || location.startsWith('/')) ? undefined : location.split('/')[0]!.split(':')[0]!
-    const port = location.split('/')[0]!.includes(':') ? Number(location.split(':')[1]!.split('/')[0]!) : undefined
+    const host = (!location || location.startsWith(':') || location.startsWith('/')) ? undefined : location.split('/')[0]?.split(':')[0]
+    const port = location.split('/')[0]?.includes(':') ? Number(location.split(':')[1]?.split('/')[0]) : undefined
     if (port !== undefined && isNaN(port)) throw new Error('connection options: invalid url port')
     let db = location.split('/')[1] || undefined
 
