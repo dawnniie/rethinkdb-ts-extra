@@ -78,6 +78,7 @@ export async function sync(r: R, configs: RDatabaseExtraConfigs, options: SyncOp
 
   if (options.dropUnknownDatabases === true) {
     for (const database of databasesDiff.removed) {
+      if (database === 'rethinkdb') continue
       actions.push({ entity: 'database', action: 'drop', name: database })
       await r.dbDrop(database).run()
     }
