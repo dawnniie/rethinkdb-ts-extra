@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Updated `tsconfig.json` to emit declaration files, and reference these in `package.json`.
+
 ## 0.3.0 - The future is now!
 
 The in-dev future implementation of rethinkdb-ts-extra, previously available at `rethinkdb-ts-extra/future`, is now default.
